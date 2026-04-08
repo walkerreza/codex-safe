@@ -30,26 +30,24 @@ if ($LASTEXITCODE -ne 0 -or $gitCheck.Trim() -ne "true") {
 
 $scriptsDir = "C:\scripts"
 $scriptPath = Join-Path $scriptsDir "codex-safe.ps1"
-$codexHome = "C:\codex-temp"
-
 New-Item -ItemType Directory -Path $scriptsDir -Force | Out-Null
-New-Item -ItemType Directory -Path $codexHome -Force | Out-Null
 
-$runner = @'
+$mainScript = @'
 param(
-    [ValidateSet("run", "check", "cleanup", "watch")]
+    [ValidateSet("run", "check", "cleanup", "watch", "uninstall")]
     [string]$Mode = "run",
 
     [string]$RepoPath = "__REPO_PATH__",
     [string]$CodexHome = "C:\codex-temp",
     [int]$WatchIntervalSeconds = 3,
-    [string]$CodexArgs = ""
+    [string]$CodexArgs = "",
+    [switch]$RemoveUserCodexFolder = $true
 )
 
 $ErrorActionPreference = "Stop"
 
 function Write-Info($msg) { Write-Host "[INFO] $msg" -ForegroundColor Cyan }
-function Write-Ok($msg) { Write-Host "[ OK ] $msg" -ForegroundColor Green }
+function Write-Ok($msg)   { Write-Host "[ OK ] $msg" -ForegroundColor Green }
 function Write-WarnMsg($msg) { Write-Host "[WARN] $msg" -ForegroundColor Yellow }
 function Write-ErrMsg($msg) { Write-Host "[ERR ] $msg" -ForegroundColor Red }
 
@@ -109,6 +107,7 @@ function Get-CodexWorktrees($path) {
         if (
             $wt -match '[\\/]\.codex[\\/]worktrees[\\/]' -or
             $wt -match '[\\/]codex-temp[\\/]worktrees[\\/]' -or
+            $wt -match '[\\/]Users[\\/][^\\/]+[\\/]\.codex[\\/]worktrees[\\/]' -or
             $wt -like "*\.codex\worktrees\*" -or
             $wt -like "*/.codex/worktrees/*"
         ) {
@@ -191,6 +190,38 @@ function Remove-CodexWorktrees($path) {
     }
     finally {
         Pop-Location
+    }
+}
+
+function Remove-CodexFolders($codexHome, [switch]$RemoveUserCodexFolder) {
+    $targets = @()
+
+    if ($codexHome) {
+        $targets += $codexHome
+    }
+
+    if ($RemoveUserCodexFolder) {
+        $targets += "C:\Users\$env:USERNAME\.codex"
+    }
+
+    $targets = $targets | Select-Object -Unique
+
+    foreach ($target in $targets) {
+        if ([string]::IsNullOrWhiteSpace($target)) { continue }
+
+        if (Test-Path $target) {
+            try {
+                Write-Info "Menghapus folder: $target"
+                Remove-Item -LiteralPath $target -Recurse -Force -ErrorAction Stop
+                Write-Ok "Folder dihapus: $target"
+            }
+            catch {
+                Write-WarnMsg "Gagal hapus folder: $target"
+            }
+        }
+        else {
+            Write-Ok "Folder tidak ada: $target"
+        }
     }
 }
 
@@ -341,6 +372,63 @@ function Start-WatchMode($path, $intervalSeconds) {
     }
 }
 
+function Remove-ProfileAlias {
+    $profilePath = $PROFILE
+    if (-not (Test-Path $profilePath)) {
+        Write-Ok "PowerShell profile belum ada."
+        return
+    }
+
+    $content = Get-Content $profilePath -Raw -ErrorAction SilentlyContinue
+    if ($null -eq $content) { $content = "" }
+
+    $pattern = '(?ms)^\s*function\s+codex-safe\s*\{.*?codex-safe\.ps1.*?\}\s*$'
+    $newContent = [regex]::Replace($content, $pattern, '').Trim()
+
+    Set-Content -Path $profilePath -Value $newContent -Encoding UTF8
+    Write-Ok "Alias codex-safe dihapus dari profile."
+}
+
+function Invoke-SelfDestruct {
+    $selfPath = $MyInvocation.PSCommandPath
+    if (-not $selfPath) {
+        Write-WarnMsg "Path script saat ini tidak ditemukan. Self delete dilewati."
+        return
+    }
+
+    $cleanupScript = @"
+Start-Sleep -Seconds 2
+try {
+    Remove-Item -LiteralPath '$selfPath' -Force -ErrorAction Stop
+} catch {}
+"@
+
+    $tempFile = Join-Path $env:TEMP ("codex-safe-selfdelete-" + [guid]::NewGuid().ToString() + ".ps1")
+    $cleanupScript | Set-Content -Path $tempFile -Encoding UTF8
+
+    Start-Process -WindowStyle Hidden powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$tempFile`""
+    Write-Ok "Self destroy dijadwalkan untuk: $selfPath"
+}
+
+function Invoke-Uninstall {
+    param(
+        [string]$Path,
+        [string]$CodexHomePath,
+        [switch]$RemoveUserCodex
+    )
+
+    Write-Host ""
+    Write-Host "===== UNINSTALL / FULL CLEANUP =====" -ForegroundColor Magenta
+
+    Remove-CodexWorktrees $Path
+    Remove-WorktreeConfigIfNeeded $Path
+    Remove-CodexFolders -codexHome $CodexHomePath -RemoveUserCodexFolder:$RemoveUserCodex
+    Remove-ProfileAlias
+    [void](Show-RepoStatus $Path)
+    Invoke-SelfDestruct
+}
+
+# MAIN
 if (-not (Test-CommandExists "git")) {
     throw "Git tidak ditemukan di PATH."
 }
@@ -358,18 +446,20 @@ switch ($Mode) {
     "check" { [void](Show-RepoStatus $RepoPath) }
     "cleanup" { Invoke-CleanupOnly $RepoPath }
     "watch" { Start-WatchMode -path $RepoPath -intervalSeconds $WatchIntervalSeconds }
+    "uninstall" { Invoke-Uninstall -Path $RepoPath -CodexHomePath $CodexHome -RemoveUserCodex:$RemoveUserCodexFolder }
 }
 '@
 
-$runner = $runner.Replace("__REPO_PATH__", $repoPath.Replace('\', '\\'))
-
-$runner | Set-Content -Path $scriptPath -Encoding UTF8
+$mainScript = $mainScript.Replace("__REPO_PATH__", $repoPath.Replace('\', '\\'))
+$mainScript | Set-Content -Path $scriptPath -Encoding UTF8
 
 if (-not (Test-Path $PROFILE)) {
     New-Item -ItemType File -Path $PROFILE -Force | Out-Null
 }
 
 $profileContent = Get-Content $PROFILE -Raw -ErrorAction SilentlyContinue
+if ($null -eq $profileContent) { $profileContent = "" }
+
 $aliasLine = 'function codex-safe { powershell -ExecutionPolicy Bypass -File "C:\scripts\codex-safe.ps1" @args }'
 
 if ($profileContent -notmatch [regex]::Escape($aliasLine)) {
@@ -387,8 +477,9 @@ Write-Host "Repo default : $repoPath"
 Write-Host "Script       : $scriptPath"
 Write-Host ""
 Write-Host "Tutup PowerShell lalu buka lagi."
-Write-Host "Setelah itu pakai:"
+Write-Host "Perintah yang tersedia:"
 Write-Host "  codex-safe -Mode check"
 Write-Host "  codex-safe -Mode run"
 Write-Host "  codex-safe -Mode cleanup"
 Write-Host "  codex-safe -Mode watch"
+Write-Host "  codex-safe -Mode uninstall"
