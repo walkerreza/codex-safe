@@ -32,16 +32,18 @@ Saat Codex dan Antigravity dipakai bersamaan:
 ## ⚡ Instalasi (1 Command)
 
 ```powershell
-irm https://YOUR-URL/install-codex-safe.ps1 | iex
+irm https://https://github.com/walkerreza/codex-safe.git/install-codex-safe.ps1 | iex
 ```
 
 Lalu isi prompt:
+contoh
 
 ```
 file path laragon/www: japanlingo
 ```
 
 ➡️ Otomatis menjadi:
+contoh
 
 ```
 C:\laragon\www\japanlingo
