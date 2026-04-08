@@ -32,7 +32,7 @@ Saat Codex dan Antigravity dipakai bersamaan:
 ## ⚡ Instalasi (1 Command)
 
 ```powershell
-irm https://github.com/walkerreza/codex-safe.git/install-codex-safe.ps1 | iex
+irm https://raw.githubusercontent.com/walkerreza/codex-safe/main/codex-safe.ps1 | iex
 ```
 
 Lalu isi prompt:
