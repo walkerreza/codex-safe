@@ -1,61 +1,65 @@
-# 🚀 Codex Safe Runner (Antigravity Friendly)
+# 🚀 Codex Safe Runner (Antigravity-Compatible)
 
-Script PowerShell untuk menjalankan **Codex CLI** tanpa merusak environment **Antigravity / Gemini Code Assist**.
+PowerShell utility untuk mengisolasi eksekusi **Codex CLI** dari state Git utama, sehingga tetap kompatibel dengan **Antigravity / Gemini Code Assist** dalam satu repository.
 
 ---
 
-## ❗ Masalah yang Diselesaikan
+## ❗ Problem Statement
 
-Saat Codex dan Antigravity dipakai bersamaan:
+Ketika Codex dan Antigravity digunakan secara bersamaan dalam satu repository:
 
-* Codex membuat **Git worktree**
-* Antigravity error:
+* Codex membuat **Git worktree** untuk eksekusi paralel
+* Antigravity tidak kompatibel dengan konfigurasi tersebut, terutama:
 
   * `extensions.worktreeconfig`
-  * `workspace infos is nil`
-* Repo jadi konflik & AI tidak jalan
+  * kondisi workspace: `workspace infos is nil`
+* Terjadi inkonsistensi state repository
+
+### Dampak
+
+* Proses agent gagal berjalan
+* Workspace tidak dapat di-load
+* Konflik state Git (non-deterministic behavior)
 
 ---
 
-## ✨ Fitur
+## ✨ Features
 
-* ✅ Jalankan Codex dengan aman
-* ✅ Auto cleanup worktree Codex
-* ✅ Deteksi konflik Git
-* ✅ Mode monitor realtime (`watch`)
-* ✅ 1 repo (tanpa clone tambahan)
-* ✅ Installer 1 command (IRM)
-* ✅ Uninstall bersih + self destroy
+* Isolated execution untuk Codex CLI
+* Automatic cleanup untuk seluruh worktree yang dibuat Codex
+* Deteksi dan remediasi konflik konfigurasi Git
+* Realtime monitoring terhadap perubahan worktree (`watch mode`)
+* Single-repo workflow (tanpa cloning tambahan)
+* One-command installer (IRM)
+* Full uninstall dengan self-destruction
 
 ---
 
-## ⚡ Instalasi (1 Command)
+## ⚡ Installation
 
 ```powershell
 irm https://raw.githubusercontent.com/walkerreza/codex-safe/main/codex-safe.ps1 | iex
 ```
 
-Lalu isi prompt:
-contoh
+Input konfigurasi path:
 
 ```
-file path laragon/www: japanlingo
+file path laragon/www: your_directory
 ```
 
-➡️ Otomatis menjadi:
-contoh
+Resolved path:
 
 ```
-C:\laragon\www\japanlingo
+C:\laragon\www\your_directory
 ```
 
 ---
 
-## 📦 Setelah Install
+## 📦 Post Installation
 
-Tutup PowerShell, lalu buka kembali.
+Restart PowerShell session.
 
-Sekarang tersedia command:
+Command tersedia:
 
 ```powershell
 codex-safe
@@ -63,33 +67,33 @@ codex-safe
 
 ---
 
-## 🧠 Cara Pakai
+## 🧠 Usage
 
-### 🔍 Cek repo aman atau tidak
+### Repository Validation
 
 ```powershell
 codex-safe -Mode check
 ```
 
-### ▶️ Jalankan Codex + auto cleanup
+### Safe Codex Execution
 
 ```powershell
 codex-safe -Mode run
 ```
 
-### 🧹 Bersihkan manual
+### Manual Cleanup
 
 ```powershell
 codex-safe -Mode cleanup
 ```
 
-### 👀 Monitor realtime (anti konflik)
+### Realtime Monitoring
 
 ```powershell
 codex-safe -Mode watch
 ```
 
-### ⚙️ Jalankan Codex dengan argumen
+### Pass-through Arguments ke Codex
 
 ```powershell
 codex-safe -Mode run -CodexArgs "--help"
@@ -97,91 +101,95 @@ codex-safe -Mode run -CodexArgs "--help"
 
 ---
 
-## 🗑️ Uninstall (Self Destroy)
+## 🗑️ Uninstall (Self-Destruct)
 
 ```powershell
 codex-safe -Mode uninstall
 ```
 
-Akan otomatis:
+Operasi yang dilakukan:
 
-* 🧹 Hapus semua worktree Codex
-* 🧹 `git worktree prune`
-* 🧹 Hapus `extensions.worktreeconfig`
-* 🧹 Hapus folder:
+* Remove seluruh Codex worktree
+* `git worktree prune`
+* Unset `extensions.worktreeconfig`
+* Remove direktori:
 
   * `C:\codex-temp`
   * `C:\Users\<user>\.codex`
-* 🧹 Hapus alias `codex-safe`
-* 💥 Hapus script `codex-safe.ps1` (self destroy)
+* Remove alias `codex-safe`
+* Self-delete script
 
 ---
 
-## ⚙️ Cara Kerja
+## ⚙️ Execution Model
 
 ### Mode `run`
 
-* Set `CODEX_HOME = C:\codex-temp`
-* Jalankan Codex
-* Setelah selesai:
+* Set environment variable:
 
-  * Hapus worktree Codex
+  ```
+  CODEX_HOME = C:\codex-temp
+  ```
+* Execute Codex CLI
+* Post-execution:
+
+  * Remove generated worktrees
   * `git worktree prune`
-  * Reset config Git
-  * Verifikasi repo aman
+  * Reset local Git config
+  * Validate repository integrity
 
 ### Mode `cleanup`
 
-* Hapus semua sisa worktree Codex
-* Reset config Git
+* Remove seluruh residual worktree
+* Reset konfigurasi Git lokal
 
 ### Mode `watch`
 
-* Monitor perubahan worktree secara realtime
-* Deteksi konflik sebelum terjadi
+* Monitor perubahan worktree secara kontinu
+* Trigger cleanup sebelum konflik terjadi
 
 ### Mode `uninstall`
 
-* Full cleanup Codex + repo
-* Hapus semua jejak
-* Self delete script
+* Full cleanup environment Codex
+* Remove seluruh artefak
+* Self-destruction script
 
 ---
 
-## ⚠️ Kenapa Ini Penting?
+## ⚠️ Technical Rationale
 
-**Codex**:
+**Codex CLI**:
 
-* Menggunakan Git worktree untuk paralel task
+* Menggunakan Git worktree untuk parallel task execution
 
 **Antigravity**:
 
-* Tidak kompatibel dengan worktree tertentu
+* Tidak mendukung repository dengan `worktreeconfig`
 
-➡️ Tanpa cleanup:
+Tanpa isolasi:
 
-* AI macet
-* Repo rusak
-* Debugging jadi chaos
-
----
-
-## 🧠 Best Practice
-
-### ✔️ Do
-
-* Jalankan `codex-safe -Mode run` saat pakai Codex
-* Jalankan `check` sebelum buka Antigravity
-* Gunakan `watch` jika kerja paralel
-
-### ❌ Don't
-
-* Jangan biarkan worktree Codex aktif terlalu lama
-* Jangan pakai 2 AI menulis file bersamaan
+* Repository state menjadi tidak konsisten
+* Tooling gagal membaca workspace
+* Debugging menjadi non-deterministic
 
 ---
 
-## 🛠️ Struktur File
+## 🧠 Best Practices
+
+### Recommended
+
+* Gunakan `run` untuk setiap eksekusi Codex
+* Jalankan `check` sebelum membuka Antigravity
+* Aktifkan `watch` untuk workflow paralel
+
+### Not Recommended
+
+* Membiarkan worktree aktif dalam waktu lama
+* Parallel write oleh multiple AI agents pada file yang sama
+
+---
+
+## 🛠️ File Layout
 
 ```
 C:\scripts\codex-safe.ps1
@@ -190,44 +198,44 @@ C:\codex-temp\
 
 ---
 
-## 🔧 Customisasi
+## 🔧 Configuration
 
-Edit file:
+Edit:
 
 ```
 C:\scripts\codex-safe.ps1
 ```
 
-Yang bisa diubah:
+Configurable parameters:
 
-* Default repo path
-* Interval watch
-* Filter worktree
-* Behavior cleanup
+* Default repository path
+* Watch interval
+* Worktree filtering rules
+* Cleanup strategy
 
 ---
 
 ## 🧪 Troubleshooting
 
-### Antigravity masih error?
+### Residual Worktree Detected
 
 ```powershell
 git worktree list --porcelain
 ```
 
-Jika masih ada `.codex/worktrees`:
+Cleanup:
 
 ```powershell
 codex-safe -Mode cleanup
 ```
 
-### Command tidak ditemukan?
+### Command Not Found
 
 ```powershell
 . $PROFILE
 ```
 
-### Codex tidak terdeteksi?
+### Codex Not Available
 
 ```powershell
 codex --version
@@ -235,16 +243,18 @@ codex --version
 
 ---
 
-## 🔥 Filosofi
+## 🔥 Design Principle
 
-Menggunakan dua AI sekaligus itu boleh.
+Multiple AI tooling dapat digunakan dalam satu workflow.
 
-**Tapi jangan biarkan mereka berbagi state Git mentah.**
+Namun:
 
-Script ini berfungsi sebagai *"penjaga"* di tengah.
+> **Git state tidak boleh dibagikan secara mentah antar sistem yang tidak kompatibel.**
+
+Script ini bertindak sebagai isolation layer.
 
 ---
 
 ## 🏁 License
 
-Free to use, modify, and improve.
+MIT-style — bebas digunakan, dimodifikasi, dan didistribusikan.
