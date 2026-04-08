@@ -1,8 +1,13 @@
-# 🚀 Codex Safe Runner (Antigravity-Compatible)
+# 🚀Codex Safe Runner – Fix Git Worktree Conflict with Antigravity & Gemini Code Assist
 
 PowerShell utility untuk mengisolasi eksekusi **Codex CLI** dari state Git utama, sehingga tetap kompatibel dengan **Antigravity / Gemini Code Assist** dalam satu repository.
 
 ---
+
+![PowerShell](https://img.shields.io/badge/Powershell-Script-blue)
+![Platform](https://img.shields.io/badge/Platform-Windows-lightgrey)
+![Status](https://img.shields.io/badge/Status-Stable-green)
+![Git](https://img.shields.io/badge/Git-Worktree%20Fix-orange)
 
 ## ❗ Problem Statement
 
@@ -258,3 +263,28 @@ Script ini bertindak sebagai isolation layer.
 ## 🏁 License
 
 MIT-style — bebas digunakan, dimodifikasi, dan didistribusikan.
+
+
+<!--
+Keywords:
+codex cli worktree fix
+git worktree conflict antigravity
+extensions.worktreeconfig error fix
+workspace infos is nil fix
+gemini code assist git issue
+codex safe runner powershell
+-->
+
+Common errors:
+- extensions.worktreeconfig
+- workspace infos is nil
+- git worktree conflict
+- antigravity workspace error
+
+## 🔍 Related Searches
+
+- fix extensions.worktreeconfig
+- workspace infos is nil vscode
+- git worktree conflict fix
+- codex cli issue
+- antigravity error workspace
