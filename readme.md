@@ -1,141 +1,252 @@
-🚀 Codex Safe Runner (Antigravity Friendly)
+# 🚀 Codex Safe Runner
 
-Script PowerShell untuk menjalankan Codex CLI tanpa merusak environment Antigravity / Gemini Code Assist.
+**Run Codex CLI safely alongside Antigravity / Gemini Code Assist**
 
-Masalah yang diselesaikan:
+PowerShell script untuk menjalankan **Codex CLI tanpa merusak environment Git**, terutama saat dipakai bersamaan dengan Antigravity.
 
-Codex membuat Git worktree
-Antigravity error karena:
-extensions.worktreeconfig
-workspace infos is nil
-Konflik state repo saat dua AI dipakai bersamaan
-✨ Fitur
-✅ Jalankan Codex dengan aman
-✅ Auto cleanup worktree Codex
-✅ Deteksi konflik Git (worktree & config)
-✅ Mode monitor realtime (watch)
-✅ 1 repo, tanpa perlu clone tambahan
-✅ Integrasi cepat via codex-safe
-⚡ Instalasi (1 command)
+---
+
+## ⚠️ Problem
+
+Saat Codex dan Antigravity dipakai dalam repo yang sama:
+
+* Codex membuat **Git worktree**
+* Antigravity tidak kompatibel dengan:
+
+  * `extensions.worktreeconfig`
+  * workspace state → `workspace infos is nil`
+* Terjadi konflik state repo
+
+### Dampaknya:
+
+* ❌ Chat macet
+* ❌ Agent tidak jalan
+* ❌ Workspace error
+
+---
+
+## ✨ Features
+
+* ✅ Safe run untuk Codex CLI
+* ✅ Auto cleanup worktree Codex
+* ✅ Deteksi konflik Git (worktree & config)
+* ✅ Realtime monitoring (`watch mode`)
+* ✅ Single repo (tanpa clone tambahan)
+* ✅ Simple command: `codex-safe`
+
+---
+
+## ⚡ Installation
+
+```powershell
 irm https://YOUR-URL/install-codex-safe.ps1 | iex
+```
 
-Lalu isi prompt:
+Saat diminta, isi path project:
 
-file path laragon/www: japanlingo
+```
+laragon/www: japanlingo
+```
 
-➡️ otomatis jadi:
+➡️ Otomatis menjadi:
 
+```
 C:\laragon\www\japanlingo
-📦 Setelah install
+```
 
-Tutup PowerShell, buka lagi.
+---
 
-Sekarang kamu punya command:
+## 📦 After Installation
 
+Tutup PowerShell, lalu buka lagi.
+
+Sekarang tersedia command:
+
+```powershell
 codex-safe
-🧠 Cara Pakai
-🔍 Cek repo aman atau tidak
+```
+
+---
+
+## 🧠 Usage
+
+### 🔍 Check repo status
+
+```powershell
 codex-safe -Mode check
-▶️ Jalankan Codex + auto cleanup
+```
+
+### ▶️ Run Codex (auto cleanup)
+
+```powershell
 codex-safe -Mode run
-🧹 Bersihkan manual
+```
+
+### 🧹 Manual cleanup
+
+```powershell
 codex-safe -Mode cleanup
-👀 Monitor realtime (anti konflik)
+```
+
+### 👀 Realtime monitor (anti konflik)
+
+```powershell
 codex-safe -Mode watch
-⚙️ Jalankan dengan argumen Codex
+```
+
+### ⚙️ Run dengan argumen Codex
+
+```powershell
 codex-safe -Mode run -CodexArgs "--help"
-🧩 Cara Kerja
+```
 
-Script ini:
+---
 
-Jalankan Codex
-Deteksi worktree dari:
-.codex/worktrees
-codex-temp
+## 🧩 How It Works
 
-Hapus worktree:
+Script ini akan:
 
+1. Menjalankan Codex CLI
+2. Mendeteksi worktree dari:
+
+   * `.codex/worktrees`
+   * `codex-temp`
+3. Menghapus worktree:
+
+```powershell
 git worktree remove --force
 git worktree prune
+```
 
-Hapus config:
+4. Membersihkan config Git:
 
+```powershell
 git config --local --unset extensions.worktreeconfig
-Verifikasi repo aman untuk Antigravity
-⚠️ Kenapa Ini Penting?
+```
 
-Codex:
+5. Verifikasi repo aman untuk Antigravity
 
-pakai Git worktree untuk task paralel
+---
 
-Antigravity:
+## ⚠️ Why This Matters
 
-tidak kompatibel dengan worktreeconfig
+**Codex** menggunakan Git worktree untuk task paralel.
 
-➡️ hasilnya:
+**Antigravity** tidak kompatibel dengan `worktreeconfig`.
 
-chat macet
-agent tidak jalan
-error workspace
-🧠 Best Practice
+➡️ Tanpa cleanup:
 
-✔ Gunakan script ini setiap selesai pakai Codex
-✔ Jalankan check sebelum buka Antigravity
-✔ Gunakan watch kalau kerja paralel
+* Workspace bisa rusak
+* AI agent gagal jalan
+* State repo jadi tidak konsisten
 
-❌ Jangan biarkan worktree Codex aktif lama
-❌ Jangan pakai 2 AI nulis file bersamaan
+---
 
-🛠️ Struktur File
+## 🧠 Best Practices
+
+### ✔️ Do
+
+* Gunakan script ini setiap selesai pakai Codex
+* Jalankan `check` sebelum buka Antigravity
+* Gunakan `watch` saat kerja paralel
+
+### ❌ Don't
+
+* Jangan biarkan worktree Codex aktif terlalu lama
+* Jangan gunakan 2 AI menulis file bersamaan
+
+---
+
+## 🛠️ File Structure
+
+```
 C:\scripts\codex-safe.ps1
 C:\codex-temp\
-🔧 Customisasi
+```
+
+---
+
+## 🔧 Customization
 
 Edit file:
 
+```
 C:\scripts\codex-safe.ps1
+```
 
-Bisa diubah:
+Yang bisa diubah:
 
-default repo path
-interval watch
-filtering worktree
-behavior cleanup
-🧪 Troubleshooting
-Codex masih ganggu Antigravity?
+* Default repo path
+* Interval watch
+* Filtering worktree
+* Behavior cleanup
+
+---
+
+## 🧪 Troubleshooting
+
+### Codex masih ganggu Antigravity?
+
+```powershell
 git worktree list --porcelain
+```
 
-Kalau ada .codex/worktrees:
+Jika masih ada `.codex/worktrees`:
 
+```powershell
 codex-safe -Mode cleanup
-Command tidak ditemukan?
+```
+
+---
+
+### Command tidak ditemukan?
 
 Restart PowerShell atau jalankan:
 
+```powershell
 . $PROFILE
-Codex tidak ditemukan?
+```
+
+---
+
+### Codex tidak ditemukan?
 
 Pastikan:
 
+```powershell
 codex --version
-🔥 Advanced
+```
 
-Script ini bisa di-upgrade jadi:
+---
 
-auto cleanup realtime
-background daemon
-multi-repo support
-integration MCP bridge
-🤝 Konsep Utama
+## 🔥 Advanced Ideas
 
-Boleh pakai Codex & Antigravity bareng — tapi jangan share state Git mentah.
+Script ini bisa dikembangkan menjadi:
 
-Script ini jadi “penjaga” di tengah.
+* Auto cleanup realtime
+* Background daemon
+* Multi-repo support
+* MCP bridge integration
 
-🏁 License
+---
+
+## 🤝 Core Concept
+
+Boleh pakai Codex & Antigravity bersamaan —
+**tapi jangan share state Git mentah.**
+
+Script ini berfungsi sebagai *"penjaga"* di tengah.
+
+---
+
+## 🏁 License
 
 Free to use, modify, and improve.
 
-Kalau kamu mau, gue bisa lanjut:
-👉 bikin versi README yang lebih “open-source style” (badge, install script auto publish, dll)
-👉 atau langsung gue bantu publish ke GitHub + generate raw URL siap irm 🔥
+---
+
+## 💡 Next Steps
+
+* Tambahkan GitHub badges
+* Publish install script (raw URL)
+* Setup CI untuk testing script
