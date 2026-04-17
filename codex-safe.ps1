@@ -34,7 +34,7 @@ New-Item -ItemType Directory -Path $scriptsDir -Force | Out-Null
 
 $mainScript = @'
 param(
-    [ValidateSet("run", "check", "cleanup", "watch", "uninstall")]
+    [ValidateSet("run", "check", "cleanup", "watch", "uninstall", "dir")]
     [string]$Mode = "run",
 
     [string]$RepoPath = "__REPO_PATH__",
@@ -410,6 +410,40 @@ try {
     Write-Ok "Self destroy dijadwalkan untuk: $selfPath"
 }
 
+function Invoke-UpdateDir {
+    param([string]$ScriptPath)
+
+    $input = Read-Host "edit www"
+
+    if ([string]::IsNullOrWhiteSpace($input)) {
+        throw "Input tidak boleh kosong."
+    }
+
+    if ([System.IO.Path]::IsPathRooted($input)) {
+        $newPath = $input
+    } else {
+        $newPath = Join-Path "C:\laragon\www" $input
+    }
+
+    $newPath = [System.IO.Path]::GetFullPath($newPath)
+
+    if (-not (Test-Path $newPath)) {
+        throw "Folder tidak ditemukan: $newPath"
+    }
+
+    $inside = git -C $newPath rev-parse --is-inside-work-tree 2>$null
+    if ($LASTEXITCODE -ne 0 -or $inside.Trim() -ne "true") {
+        throw "Bukan repo git: $newPath"
+    }
+
+    $content = Get-Content $ScriptPath -Raw
+    $escaped = $newPath.Replace('\', '\\')
+    $content = $content -replace '(?<=\[string\]\$RepoPath = ")[^"]*(?=")', $escaped
+    Set-Content -Path $ScriptPath -Value $content -Encoding UTF8
+
+    Write-Ok "RepoPath diupdate ke: $newPath"
+}
+
 function Invoke-Uninstall {
     param(
         [string]$Path,
@@ -447,6 +481,7 @@ switch ($Mode) {
     "cleanup" { Invoke-CleanupOnly $RepoPath }
     "watch" { Start-WatchMode -path $RepoPath -intervalSeconds $WatchIntervalSeconds }
     "uninstall" { Invoke-Uninstall -Path $RepoPath -CodexHomePath $CodexHome -RemoveUserCodex:$RemoveUserCodexFolder }
+    "dir" { Invoke-UpdateDir -ScriptPath $PSCommandPath }
 }
 '@
 
@@ -483,3 +518,4 @@ Write-Host "  codex-safe -Mode run"
 Write-Host "  codex-safe -Mode cleanup"
 Write-Host "  codex-safe -Mode watch"
 Write-Host "  codex-safe -Mode uninstall"
+Write-Host "  codex-safe -Mode dir    
