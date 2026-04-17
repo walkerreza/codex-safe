@@ -1,66 +1,70 @@
-# 🚀 Codex Safe Runner
+# 🚀Codex Safe Runner – Fix Git Worktree Conflict with Antigravity & Gemini Code Assist
 
-**Run Codex CLI safely alongside Antigravity / Gemini Code Assist**
-
-PowerShell script untuk menjalankan **Codex CLI tanpa merusak environment Git**, terutama saat dipakai bersamaan dengan Antigravity.
+PowerShell utility untuk mengisolasi eksekusi **Codex CLI** dari state Git utama, sehingga tetap kompatibel dengan **Antigravity / Gemini Code Assist** dalam satu repository.
 
 ---
 
-## ⚠️ Problem
+![PowerShell](https://img.shields.io/badge/Powershell-Script-blue)
+![Platform](https://img.shields.io/badge/Platform-Windows-lightgrey)
+![Status](https://img.shields.io/badge/Status-Stable-green)
+![Git](https://img.shields.io/badge/Git-Worktree%20Fix-orange)
 
-Saat Codex dan Antigravity dipakai dalam repo yang sama:
+## ❗ Problem Statement
 
-* Codex membuat **Git worktree**
-* Antigravity tidak kompatibel dengan:
+Ketika Codex dan Antigravity digunakan secara bersamaan dalam satu repository:
+
+* Codex membuat **Git worktree** untuk eksekusi paralel
+* Antigravity tidak kompatibel dengan konfigurasi tersebut, terutama:
 
   * `extensions.worktreeconfig`
-  * workspace state → `workspace infos is nil`
-* Terjadi konflik state repo
+  * kondisi workspace: `workspace infos is nil`
+* Terjadi inkonsistensi state repository
 
-### Dampaknya:
+### Dampak
 
-* ❌ Chat macet
-* ❌ Agent tidak jalan
-* ❌ Workspace error
+* Proses agent gagal berjalan
+* Workspace tidak dapat di-load
+* Konflik state Git (non-deterministic behavior)
 
 ---
 
 ## ✨ Features
 
-* ✅ Safe run untuk Codex CLI
-* ✅ Auto cleanup worktree Codex
-* ✅ Deteksi konflik Git (worktree & config)
-* ✅ Realtime monitoring (`watch mode`)
-* ✅ Single repo (tanpa clone tambahan)
-* ✅ Simple command: `codex-safe`
+* Isolated execution untuk Codex CLI
+* Automatic cleanup untuk seluruh worktree yang dibuat Codex
+* Deteksi dan remediasi konflik konfigurasi Git
+* Realtime monitoring terhadap perubahan worktree (`watch mode`)
+* Single-repo workflow (tanpa cloning tambahan)
+* One-command installer (IRM)
+* Full uninstall dengan self-destruction
 
 ---
 
 ## ⚡ Installation
 
 ```powershell
-irm https://YOUR-URL/install-codex-safe.ps1 | iex
+irm https://raw.githubusercontent.com/walkerreza/codex-safe/main/codex-safe.ps1 | iex
 ```
 
-Saat diminta, isi path project:
+Input konfigurasi path:
 
 ```
-laragon/www: japanlingo
+file path laragon/www: your_directory
 ```
 
-➡️ Otomatis menjadi:
+Resolved path:
 
 ```
-C:\laragon\www\japanlingo
+C:\laragon\www\your_directory
 ```
 
 ---
 
-## 📦 After Installation
+## 📦 Post Installation
 
-Tutup PowerShell, lalu buka lagi.
+Restart PowerShell session.
 
-Sekarang tersedia command:
+Command tersedia:
 
 ```powershell
 codex-safe
@@ -70,31 +74,31 @@ codex-safe
 
 ## 🧠 Usage
 
-### 🔍 Check repo status
+### Repository Validation
 
 ```powershell
 codex-safe -Mode check
 ```
 
-### ▶️ Run Codex (auto cleanup)
+### Safe Codex Execution
 
 ```powershell
 codex-safe -Mode run
 ```
 
-### 🧹 Manual cleanup
+### Manual Cleanup
 
 ```powershell
 codex-safe -Mode cleanup
 ```
 
-### 👀 Realtime monitor (anti konflik)
+### Realtime Monitoring
 
 ```powershell
 codex-safe -Mode watch
 ```
 
-### ⚙️ Run dengan argumen Codex
+### Pass-through Arguments ke Codex
 
 ```powershell
 codex-safe -Mode run -CodexArgs "--help"
@@ -102,62 +106,95 @@ codex-safe -Mode run -CodexArgs "--help"
 
 ---
 
-## 🧩 How It Works
-
-Script ini akan:
-
-1. Menjalankan Codex CLI
-2. Mendeteksi worktree dari:
-
-   * `.codex/worktrees`
-   * `codex-temp`
-3. Menghapus worktree:
+## 🗑️ Uninstall (Self-Destruct)
 
 ```powershell
-git worktree remove --force
-git worktree prune
+codex-safe -Mode uninstall
 ```
 
-4. Membersihkan config Git:
+Operasi yang dilakukan:
 
-```powershell
-git config --local --unset extensions.worktreeconfig
-```
+* Remove seluruh Codex worktree
+* `git worktree prune`
+* Unset `extensions.worktreeconfig`
+* Remove direktori:
 
-5. Verifikasi repo aman untuk Antigravity
+  * `C:\codex-temp`
+  * `C:\Users\<user>\.codex`
+* Remove alias `codex-safe`
+* Self-delete script
 
 ---
 
-## ⚠️ Why This Matters
+## ⚙️ Execution Model
 
-**Codex** menggunakan Git worktree untuk task paralel.
+### Mode `run`
 
-**Antigravity** tidak kompatibel dengan `worktreeconfig`.
+* Set environment variable:
 
-➡️ Tanpa cleanup:
+  ```
+  CODEX_HOME = C:\codex-temp
+  ```
+* Execute Codex CLI
+* Post-execution:
 
-* Workspace bisa rusak
-* AI agent gagal jalan
-* State repo jadi tidak konsisten
+  * Remove generated worktrees
+  * `git worktree prune`
+  * Reset local Git config
+  * Validate repository integrity
+
+### Mode `cleanup`
+
+* Remove seluruh residual worktree
+* Reset konfigurasi Git lokal
+
+### Mode `watch`
+
+* Monitor perubahan worktree secara kontinu
+* Trigger cleanup sebelum konflik terjadi
+
+### Mode `uninstall`
+
+* Full cleanup environment Codex
+* Remove seluruh artefak
+* Self-destruction script
+
+---
+
+## ⚠️ Technical Rationale
+
+**Codex CLI**:
+
+* Menggunakan Git worktree untuk parallel task execution
+
+**Antigravity**:
+
+* Tidak mendukung repository dengan `worktreeconfig`
+
+Tanpa isolasi:
+
+* Repository state menjadi tidak konsisten
+* Tooling gagal membaca workspace
+* Debugging menjadi non-deterministic
 
 ---
 
 ## 🧠 Best Practices
 
-### ✔️ Do
+### Recommended
 
-* Gunakan script ini setiap selesai pakai Codex
-* Jalankan `check` sebelum buka Antigravity
-* Gunakan `watch` saat kerja paralel
+* Gunakan `run` untuk setiap eksekusi Codex
+* Jalankan `check` sebelum membuka Antigravity
+* Aktifkan `watch` untuk workflow paralel
 
-### ❌ Don't
+### Not Recommended
 
-* Jangan biarkan worktree Codex aktif terlalu lama
-* Jangan gunakan 2 AI menulis file bersamaan
+* Membiarkan worktree aktif dalam waktu lama
+* Parallel write oleh multiple AI agents pada file yang sama
 
 ---
 
-## 🛠️ File Structure
+## 🛠️ File Layout
 
 ```
 C:\scripts\codex-safe.ps1
@@ -166,52 +203,44 @@ C:\codex-temp\
 
 ---
 
-## 🔧 Customization
+## 🔧 Configuration
 
-Edit file:
+Edit:
 
 ```
 C:\scripts\codex-safe.ps1
 ```
 
-Yang bisa diubah:
+Configurable parameters:
 
-* Default repo path
-* Interval watch
-* Filtering worktree
-* Behavior cleanup
+* Default repository path
+* Watch interval
+* Worktree filtering rules
+* Cleanup strategy
 
 ---
 
 ## 🧪 Troubleshooting
 
-### Codex masih ganggu Antigravity?
+### Residual Worktree Detected
 
 ```powershell
 git worktree list --porcelain
 ```
 
-Jika masih ada `.codex/worktrees`:
+Cleanup:
 
 ```powershell
 codex-safe -Mode cleanup
 ```
 
----
-
-### Command tidak ditemukan?
-
-Restart PowerShell atau jalankan:
+### Command Not Found
 
 ```powershell
 . $PROFILE
 ```
 
----
-
-### Codex tidak ditemukan?
-
-Pastikan:
+### Codex Not Available
 
 ```powershell
 codex --version
@@ -219,34 +248,43 @@ codex --version
 
 ---
 
-## 🔥 Advanced Ideas
+## 🔥 Design Principle
 
-Script ini bisa dikembangkan menjadi:
+Multiple AI tooling dapat digunakan dalam satu workflow.
 
-* Auto cleanup realtime
-* Background daemon
-* Multi-repo support
-* MCP bridge integration
+Namun:
 
----
+> **Git state tidak boleh dibagikan secara mentah antar sistem yang tidak kompatibel.**
 
-## 🤝 Core Concept
-
-Boleh pakai Codex & Antigravity bersamaan —
-**tapi jangan share state Git mentah.**
-
-Script ini berfungsi sebagai *"penjaga"* di tengah.
+Script ini bertindak sebagai isolation layer.
 
 ---
 
 ## 🏁 License
 
-Free to use, modify, and improve.
+MIT-style — bebas digunakan, dimodifikasi, dan didistribusikan.
 
----
 
-## 💡 Next Steps
+<!--
+Keywords:
+codex cli worktree fix
+git worktree conflict antigravity
+extensions.worktreeconfig error fix
+workspace infos is nil fix
+gemini code assist git issue
+codex safe runner powershell
+-->
 
-* Tambahkan GitHub badges
-* Publish install script (raw URL)
-* Setup CI untuk testing script
+Common errors:
+- extensions.worktreeconfig
+- workspace infos is nil
+- git worktree conflict
+- antigravity workspace error
+
+## 🔍 Related Searches
+
+- fix extensions.worktreeconfig
+- workspace infos is nil vscode
+- git worktree conflict fix
+- codex cli issue
+- antigravity error workspace
