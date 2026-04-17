@@ -518,4 +518,4 @@ Write-Host "  codex-safe -Mode run"
 Write-Host "  codex-safe -Mode cleanup"
 Write-Host "  codex-safe -Mode watch"
 Write-Host "  codex-safe -Mode uninstall"
-Write-Host "  codex-safe -Mode dir    
+Write-Host "  codex-safe -Mode dir"
